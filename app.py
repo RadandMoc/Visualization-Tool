@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 
 from src.data_loader import load_data
 from src.statistics import calculate_descriptive_stats, calculate_correlation
-from src.data_modifier import sample_data, reduce_dimensions
+from src.data_modifier import sample_data, reduce_dimensions, remove_columns
 from src.visualizer import create_plot
 
 st.set_page_config(layout="wide", page_title="Narzędzie do wizualizacji danych")
@@ -131,6 +131,56 @@ if st.session_state.data is not None:
                     except Exception as e:
                         st.sidebar.error(f"Błąd: {e}")
 
+        elif mod_type == "Usuń kolumny":
+            st.sidebar.subheader("Wybór kolumn do usunięcia")
+            
+            # Lista wszystkich kolumn
+            all_columns = df.columns.tolist()
+            
+            if not all_columns:
+                st.sidebar.warning("Brak kolumn do usunięcia.")
+            else:
+                # Multiselect do wyboru kolumn do usunięcia
+                columns_to_remove = st.sidebar.multiselect(
+                    "Wybierz kolumny do usunięcia:",
+                    options=all_columns,
+                    help="Wybierz jedną lub więcej kolumn, które chcesz usunąć z zestawu danych"
+                )
+                
+                if columns_to_remove:
+                    st.sidebar.info(f"Wybrano {len(columns_to_remove)} kolumn do usunięcia")
+                    st.sidebar.write("Kolumny do usunięcia:")
+                    for col in columns_to_remove:
+                        st.sidebar.write(f"- {col}")
+                    
+                    # Ostrzeżenie jeśli wszystkie kolumny zostaną usunięte
+                    remaining_columns = len(all_columns) - len(columns_to_remove)
+                    if remaining_columns == 0:
+                        st.sidebar.error("Nie można usunąć wszystkich kolumn!")
+                    else:
+                        st.sidebar.success(f"Pozostanie {remaining_columns} kolumn")
+                        
+                        if st.sidebar.button("Usuń wybrane kolumny"):
+                            try:
+                                # Usuń wybrane kolumny używając funkcji
+                                modified_df = remove_columns(df, columns_to_remove)
+                                st.session_state.data = modified_df
+                                
+                                # Dodaj komunikat do bloków
+                                removed_columns_str = ", ".join(columns_to_remove)
+                                st.session_state.blocks.append({
+                                    "type": "message", 
+                                    "content": f"Usunięto kolumny: {removed_columns_str}. Pozostało {len(modified_df.columns)} kolumn.",
+                                    "title": "Komunikat o modyfikacji"
+                                })
+                                
+                            except ValueError as e:
+                                st.sidebar.error(str(e))
+                            except Exception as e:
+                                st.sidebar.error(f"Błąd podczas usuwania kolumn: {e}")
+                else:
+                    st.sidebar.info("Wybierz kolumny do usunięcia")
+# ...existing code...
     elif action == "Oblicz statystyki":
         st.sidebar.subheader("Opcje statystyk")
         stat_type = st.sidebar.selectbox("Typ statystyk", ["Statystyki opisowe", "Korelacja"])

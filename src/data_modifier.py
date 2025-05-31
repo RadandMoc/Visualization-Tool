@@ -1,7 +1,7 @@
 # src/data_modifier.py
 
 import pandas as pd
-from typing import Literal, Dict, Any
+from typing import Literal, Dict, Any, List
 import numpy as np
 
 # Redukcja wymiarowości
@@ -123,3 +123,31 @@ def reduce_dimensions(df: pd.DataFrame, method: Literal['t-SNE', 'UMAP', 'TRIMAP
         columns=[f'Komponent_{i+1}' for i in range(n_components)],
         index=numeric_df.index
     )
+
+def remove_columns(df: pd.DataFrame, columns_to_remove: List[str]) -> pd.DataFrame:
+    """
+    Usuwa wybrane kolumny z ramki danych.
+    
+    Args:
+        df: Ramka danych Pandas
+        columns_to_remove: Lista nazw kolumn do usunięcia
+    
+    Returns:
+        Ramka danych bez wybranych kolumn
+        
+    Raises:
+        ValueError: Jeśli próbuje się usunąć wszystkie kolumny lub nieistniejące kolumny
+    """
+    if not columns_to_remove:
+        return df
+    
+    # Sprawdź czy wszystkie kolumny istnieją
+    missing_columns = [col for col in columns_to_remove if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Kolumny nie istnieją: {', '.join(missing_columns)}")
+    
+    # Sprawdź czy nie usuwamy wszystkich kolumn
+    if len(columns_to_remove) >= len(df.columns):
+        raise ValueError("Nie można usunąć wszystkich kolumn")
+    
+    return df.drop(columns=columns_to_remove)
