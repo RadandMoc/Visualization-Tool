@@ -128,6 +128,9 @@ if st.session_state.data is not None:
                                 "content": f"Wykonano redukcję wymiarowości metodą {dim_red_method} do {n_comp} wymiarów. Dane zostały znormalizowane.", 
                                 "title": "Komunikat o modyfikacji"
                             })
+                            
+                            st.rerun()  # Dodane odświeżenie
+                            
                     except Exception as e:
                         st.sidebar.error(f"Błąd: {e}")
 
@@ -173,6 +176,8 @@ if st.session_state.data is not None:
                                     "content": f"Usunięto kolumny: {removed_columns_str}. Pozostało {len(modified_df.columns)} kolumn.",
                                     "title": "Komunikat o modyfikacji"
                                 })
+                                
+                                st.rerun()  # Dodane odświeżenie
                                 
                             except ValueError as e:
                                 st.sidebar.error(str(e))
@@ -235,6 +240,8 @@ if st.session_state.data is not None:
                         "content": corr_df, 
                         "title": f"Macierz korelacji ({corr_method}){column_info}"
                     })
+                
+                st.rerun()  # Dodane odświeżenie
                     
             except ValueError as e:
                 st.sidebar.error(str(e))
