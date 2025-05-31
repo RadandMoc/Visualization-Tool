@@ -17,7 +17,7 @@ if 'data' not in st.session_state:
 if 'blocks' not in st.session_state:
     st.session_state.blocks: List[Dict[str, Any]] = []
 
-st.title("Wizualizacja Dużych Zbiorów Danych 🚀")
+st.title("Wizualizacja Dużych Zbiorów Danych")
 st.markdown("---")
 
 # --- KROK 1: WCZYTANIE DANYCH ---
