@@ -26,18 +26,36 @@ st.header("1. Wczytaj dane")
 # Sprawdzamy, czy dane nie zostały już wczytane, aby uniknąć resetowania przy każdej interakcji
 if st.session_state.data is None:
     uploaded_file = st.file_uploader("Wybierz plik .csv", type="csv")
-    sep_input = st.text_input(
-        "Określ separator", 
-        value="auto", 
-        help="Wpisz znak separatora (np. ';' lub ','). Wpisz 'auto', aby program spróbował wykryć go automatycznie."
-    )
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        sep_input = st.text_input(
+            "Określ separator kolumn", 
+            value="auto", 
+            help="Wpisz znak separatora (np. ';' lub ','). Wpisz 'auto', aby program spróbował wykryć go automatycznie."
+        )
+    
+    with col2:
+        decimal_input = st.selectbox(
+            "Separator dziesiętny",
+            options=['.', ','],
+            index=0,
+            help="Wybierz znak używany jako separator dziesiętny w liczbach"
+        )
 
     if st.button("Wczytaj dane") and uploaded_file is not None:
-        df = load_data(uploaded_file, separator=sep_input)
+        df = load_data(uploaded_file, separator=sep_input, decimal=decimal_input)
         if df is not None:
             st.session_state.data = df
             st.subheader("Podgląd wczytanych danych:")
             st.dataframe(df.head())
+            
+            # Pokaż informacje o typach kolumn
+            col_info = df.dtypes.value_counts()
+            st.subheader("Informacje o typach danych:")
+            for dtype, count in col_info.items():
+                st.write(f"- **{dtype}**: {count} kolumn")
+            
             st.rerun() # Odświeżamy, aby ukryć opcje wczytywania i pokazać panel
 else:
     st.success("Dane są załadowane. Możesz rozpocząć analizę z panelu bocznego.")
