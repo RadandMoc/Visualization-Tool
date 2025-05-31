@@ -2,15 +2,25 @@
 
 import pandas as pd
 from typing import Literal, Dict, Any
+import numpy as np
 
 # Redukcja wymiarowości
 from sklearn.manifold import TSNE
 from umap import UMAP
-from trimap import TRIMAP
-from pacmap import PaCMAP
+try:
+    from trimap import TRIMAP
+    TRIMAP_AVAILABLE = True
+except ImportError:
+    TRIMAP_AVAILABLE = False
+    
+try:
+    from pacmap import PaCMAP
+    PACMAP_AVAILABLE = True
+except ImportError:
+    PACMAP_AVAILABLE = False
 
 def sample_data(df: pd.DataFrame, method: Literal['Pierwsze n', 'Ostatnie n', 'Losowe n'], n_samples: int) -> pd.DataFrame:
-    """Próbkuje dane zgodnie z wybraną metodą. [cite: 4]"""
+    """Próbkuje dane zgodnie z wybraną metodą."""
     if n_samples >= len(df):
         return df
     if method == 'Pierwsze n':
@@ -18,25 +28,98 @@ def sample_data(df: pd.DataFrame, method: Literal['Pierwsze n', 'Ostatnie n', 'L
     if method == 'Ostatnie n':
         return df.tail(n_samples)
     if method == 'Losowe n':
-        return df.sample(n=n_samples)
+        return df.sample(n=n_samples, random_state=42)
     return df
 
 def reduce_dimensions(df: pd.DataFrame, method: Literal['t-SNE', 'UMAP', 'TRIMAP', 'PaCMAP'], params: Dict[str, Any]) -> pd.DataFrame:
-    """Redukuje wymiarowość danych przy użyciu wybranej metody. [cite: 2]"""
-    reducers = {
-        't-SNE': TSNE,
-        'UMAP': UMAP,
-        'TRIMAP': TRIMAP,
-        'PaCMAP': PaCMAP
-    }
+    """Redukuje wymiarowość danych przy użyciu wybranej metody."""
     
-    n_components = params.pop('n_components', 2)
-    reducer = reducers[method](n_components=n_components, **params)
+    # Filtruj tylko kolumny numeryczne i usuń NaN
+    numeric_df = df.select_dtypes(include=['number']).dropna()
+    if numeric_df.empty:
+        raise ValueError("Brak kolumn numerycznych do redukcji wymiarowości.")
     
-    transformed_data = reducer.fit_transform(df.select_dtypes(include=['number']))
+    n_components = params.get('n_components', 2)
+    n_samples = len(numeric_df)
+    n_features = len(numeric_df.columns)
+    
+    # Walidacja podstawowa
+    if n_samples < 4:
+        raise ValueError(f"Za mało próbek ({n_samples}). Potrzebne minimum 4 próbki.")
+    if n_features < 2:
+        raise ValueError(f"Za mało cech ({n_features}). Potrzebne minimum 2 cechy.")
+    
+    # Przygotuj parametry dla każdej metody
+    if method == 't-SNE':
+        # t-SNE ma ograniczenia dla barnes_hut
+        if n_components > 3:
+            # Użyj exact dla więcej niż 3 wymiarów
+            tsne_method = 'exact'
+        else:
+            tsne_method = 'barnes_hut'
+        
+        perplexity = min(30, max(5, (n_samples - 1) // 3))
+        reducer = TSNE(
+            n_components=n_components, 
+            perplexity=perplexity, 
+            method=tsne_method,
+            random_state=42,
+            init='random'
+        )
+        
+    elif method == 'UMAP':
+        n_neighbors = min(15, max(2, n_samples - 1))
+        reducer = UMAP(
+            n_components=n_components, 
+            n_neighbors=n_neighbors, 
+            random_state=42,
+            min_dist=0.1
+        )
+        
+    elif method == 'TRIMAP':
+        if not TRIMAP_AVAILABLE:
+            raise ValueError("TRIMAP nie jest dostępny. Zainstaluj bibliotekę trimap.")
+        
+        # TRIMAP wymaga konkretnych parametrów
+        n_inliers = min(10, max(1, n_samples // 10))
+        n_outliers = min(5, max(1, n_samples // 20))
+        n_random = min(5, max(1, n_samples // 20))
+        
+        reducer = TRIMAP(
+            n_dims=n_components,
+            n_inliers=n_inliers,
+            n_outliers=n_outliers,
+            n_random=n_random,
+            verbose=False
+        )
+        
+    elif method == 'PaCMAP':
+        if not PACMAP_AVAILABLE:
+            raise ValueError("PaCMAP nie jest dostępny. Zainstaluj bibliotekę pacmap.")
+        
+        n_neighbors = min(10, max(2, n_samples - 1))
+        reducer = PaCMAP(
+            n_components=n_components, 
+            n_neighbors=n_neighbors,
+            random_state=42
+        )
+        
+    else:
+        raise ValueError(f"Nieznana metoda redukcji wymiarowości: {method}")
+    
+    # Normalizacja danych (ważne dla algorytmów redukcji wymiarowości)
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(numeric_df)
+    
+    # Wykonaj redukcję wymiarowości
+    try:
+        transformed_data = reducer.fit_transform(scaled_data)
+    except Exception as e:
+        raise ValueError(f"Błąd podczas redukcji wymiarowości metodą {method}: {str(e)}")
     
     return pd.DataFrame(
         transformed_data,
         columns=[f'Komponent_{i+1}' for i in range(n_components)],
-        index=df.index
+        index=numeric_df.index
     )

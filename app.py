@@ -84,17 +84,52 @@ if st.session_state.data is not None:
                 st.session_state.blocks.append({"type": "message", "content": f"Wykonano próbkowanie. Nowa liczba wierszy: {len(st.session_state.data)}.", "title": "Komunikat o modyfikacji"})
                 st.rerun()
         
-        elif mod_type == "Redukcja wymiarowości": #
-            dim_red_method = st.sidebar.selectbox("Algorytm", ['t-SNE', 'UMAP', 'TRIMAP', 'PaCMAP'])
-            n_comp = st.sidebar.slider("Docelowa liczba wymiarów", 2, 10, 2)
-            if st.sidebar.button("Redukuj wymiary"):
-                try:
-                    reduced_df = reduce_dimensions(df, dim_red_method, {'n_components': n_comp})
-                    st.session_state.data = reduced_df
-                    st.session_state.blocks.append({"type": "message", "content": f"Wykonano redukcję wymiarowości metodą {dim_red_method} do {n_comp} wymiarów.", "title": "Komunikat o modyfikacji"})
-                    st.rerun()
-                except Exception as e:
-                    st.sidebar.error(f"Błąd: {e}")
+        elif mod_type == "Redukcja wymiarowości":
+            # Sprawdź dostępne metody
+            available_methods = ['t-SNE', 'UMAP']
+            try:
+                from trimap import TRIMAP
+                available_methods.append('TRIMAP')
+            except ImportError:
+                pass
+            try:
+                from pacmap import PaCMAP
+                available_methods.append('PaCMAP')
+            except ImportError:
+                pass
+                
+            dim_red_method = st.sidebar.selectbox("Algorytm", available_methods)
+            
+            # Ograniczenia dla t-SNE
+            if dim_red_method == 't-SNE':
+                max_comp = 3  # t-SNE barnes_hut działa tylko do 3 wymiarów
+                st.sidebar.info("t-SNE: maksymalnie 3 wymiary dla algorytmu barnes_hut")
+            else:
+                max_comp = 10
+                
+            n_comp = st.sidebar.slider("Docelowa liczba wymiarów", 2, max_comp, 2)
+            
+            # Sprawdź czy dane są odpowiednie do redukcji
+            numeric_df = df.select_dtypes(include=['number']).dropna()
+            if len(numeric_df) < 4:
+                st.sidebar.warning("Za mało wierszy do redukcji wymiarowości (minimum 4).")
+            elif len(numeric_df.columns) < 2:
+                st.sidebar.warning("Za mało kolumn numerycznych do redukcji wymiarowości (minimum 2).")
+            else:
+                st.sidebar.info(f"Dostępne dane: {len(numeric_df)} wierszy, {len(numeric_df.columns)} kolumn numerycznych")
+                
+                if st.sidebar.button("Redukuj wymiary"):
+                    try:
+                        with st.spinner(f'Wykonuję redukcję wymiarowości metodą {dim_red_method}...'):
+                            reduced_df = reduce_dimensions(df, dim_red_method, {'n_components': n_comp})
+                            st.session_state.data = reduced_df
+                            st.session_state.blocks.append({
+                                "type": "message", 
+                                "content": f"Wykonano redukcję wymiarowości metodą {dim_red_method} do {n_comp} wymiarów. Dane zostały znormalizowane.", 
+                                "title": "Komunikat o modyfikacji"
+                            })
+                    except Exception as e:
+                        st.sidebar.error(f"Błąd: {e}")
 
     elif action == "Oblicz statystyki":
         st.sidebar.subheader("Opcje statystyk")
