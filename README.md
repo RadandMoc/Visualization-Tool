@@ -4,29 +4,10 @@ Aplikacja webowa stworzona w Streamlit do interaktywnej analizy i wizualizacji z
 
 ## Funkcjonalności
 
-* Wczytywanie danych z plików `.csv` z niestandardowym separatorem. [cite: 8]
-* Modyfikacja danych: próbkowanie, redukcja wymiarowości (`t-SNE`, `UMAP`, `TRIMAP`, `PaCMAP`). [cite: 2, 4]
-* Obliczanie statystyk: opisowe, korelacje `Pearsona` i `Spearmana`. [cite: 6, 7]
-* Generowanie różnorodnych wykresów: histogramy, punktowe, słupkowe, liniowe, pudełkowe i mapy ciepła. [cite: 3]
-
-## Instalacja
-
-1.  Sklonuj repozytorium:
-    ```bash
-    git clone <adres-repozytorium>
-    cd wizualizacja-danych
-    ```
-
-2.  (Opcjonalnie, ale zalecane) Stwórz i aktywuj wirtualne środowisko:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # Na Windows: venv\Scripts\activate
-    ```
-
-3.  Zainstaluj wymagane pakiety:
-    ```bash
-    pip install -r requirements.txt
-    ```
+* Wczytywanie danych z plików `.csv` z niestandardowym separatorem. 
+* Modyfikacja danych: próbkowanie, redukcja wymiarowości (`t-SNE`, `UMAP`, `TRIMAP`, `PaCMAP`). 
+* Obliczanie statystyk: opisowe, korelacje `Pearsona` i `Spearmana`. 
+* Generowanie różnorodnych wykresów: histogramy, punktowe, słupkowe, liniowe, pudełkowe i mapy ciepła. 
 
 ## Uruchomienie
 
