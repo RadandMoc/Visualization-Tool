@@ -247,29 +247,51 @@ if st.session_state.data is not None:
                 st.sidebar.error(str(e))
             except Exception as e:
                 st.sidebar.error(f"Wystąpił błąd: {e}")
-    elif action == "Zwizualizuj dane": #
+    elif action == "Zwizualizuj dane":
         st.sidebar.subheader("Opcje wizualizacji")
-        plot_type = st.sidebar.selectbox("Typ wykresu", ['Histogram', 'Wykres punktowy', 'Wykres słupkowy', 'Wykres liniowy', 'Wykres pudełkowy', 'Mapa ciepła'])
         
-        params = {}
-        numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
+        # Wszystkie dostępne kolumny w aktualnym DataFrame
         all_columns = df.columns.tolist()
+        numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
+        categorical_columns = df.select_dtypes(exclude=['number']).columns.tolist()
 
-        if not numeric_columns:
-            st.sidebar.warning("Brak kolumn numerycznych do wizualizacji.")
+        if not all_columns:
+            st.sidebar.warning("Brak danych do wizualizacji.")
         else:
-            if plot_type in ['Histogram', 'Wykres pudełkowy']:
-                params['x_col'] = st.sidebar.selectbox("Wybierz kolumnę", numeric_columns)
-                params['y_col'] = params['x_col']
-            elif plot_type in ['Wykres punktowy', 'Wykres słupkowy']:
-                params['x_col'] = st.sidebar.selectbox("Wybierz kolumnę dla osi X", all_columns)
-                params['y_col'] = st.sidebar.selectbox("Wybierz kolumnę dla osi Y", numeric_columns)
+            plot_type = st.sidebar.selectbox("Typ wykresu", ['Wykres punktowy', 'Histogram', 'Wykres słupkowy', 'Wykres liniowy', 'Wykres pudełkowy', 'Mapa ciepła'])
+            
+            params = {}
+            
+            # --- ULEPSZONA LOGIKA WYBORU KOLUMN ---
+            
+            # Parametry dla osi X i Y
+            if plot_type in ['Wykres punktowy', 'Wykres słupkowy']:
+                params['x'] = st.sidebar.selectbox("Wybierz kolumnę dla osi X", all_columns)
+                params['y'] = st.sidebar.selectbox("Wybierz kolumnę dla osi Y", numeric_columns)
+            elif plot_type == 'Histogram':
+                params['x'] = st.sidebar.selectbox("Wybierz kolumnę", all_columns)
+            elif plot_type == 'Wykres pudełkowy':
+                params['y'] = st.sidebar.selectbox("Wybierz kolumnę", numeric_columns)
             elif plot_type == 'Wykres liniowy':
-                params['y_col'] = st.sidebar.selectbox("Wybierz kolumnę do wykreślenia", numeric_columns)
+                params['x'] = st.sidebar.selectbox("Wybierz kolumnę dla osi X (indeks jeśli brak)", [None] + all_columns, index=0)
+                params['y'] = st.sidebar.selectbox("Wybierz kolumnę dla osi Y", numeric_columns)
+            
+            # Opcjonalny parametr 'color' dla wybranych typów wykresów
+            if plot_type in ['Wykres punktowy', 'Histogram', 'Wykres słupkowy', 'Wykres pudełkowy']:
+                color_options = [None] + categorical_columns + numeric_columns # Kolorować można też wg skali numerycznej
+                selected_color = st.sidebar.selectbox("Koloruj według kolumny (opcjonalnie)", color_options, index=0)
+                if selected_color:
+                    params['color'] = selected_color
+
+            # Tytuł wykresu
+            params['title'] = st.sidebar.text_input("Tytuł wykresu", f"{plot_type}")
             
             if st.sidebar.button("Generuj wykres"):
                 try:
                     if plot_type == 'Mapa ciepła':
+                        # Usunięcie klucza, który nie jest parametrem plotly
+                        params.pop('x', None)
+                        params.pop('y', None)
                         corr_df = calculate_correlation(df, 'pearson')
                         params['corr_df'] = corr_df
                     
